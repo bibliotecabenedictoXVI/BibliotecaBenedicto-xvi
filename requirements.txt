@@ -1,2 +1,4 @@
-<b>absolutamente todo</b> lo que hay adentro y asegúrate de dejar <b>únicamente</b> estas cinco líneas limpias (sin frases ni texto extra):
-<pre><code>Flask
+pandas
+requests
+openpyxl
+gunicorn
