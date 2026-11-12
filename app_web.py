@@ -25,7 +25,34 @@ def normalizar_texto(texto):
 def inicializar_bd():
     conn = sqlite3.connect("biblioteca_sjp2.db")
     cursor = conn.cursor()
+    cursor.execute("DROP TABLE IF EXISTS libros")
     
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS credenciales (
+            usuario TEXT PRIMARY KEY,
+            password TEXT NOT NULL,
+            rol TEXT NOT NULL,
+            nombre_completo TEXT,
+            correo TEXT
+        )
+    """)
+    
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS libros (
+            id TEXT PRIMARY KEY,
+            titulo TEXT NOT NULL,
+            autor TEXT NOT NULL,
+            categoria TEXT NOT NULL,
+            anio INTEGER NOT NULL,
+            ejemplares INTEGER NOT NULL,
+            ubicacion TEXT NOT NULL,
+            editorial TEXT,
+            ciudad TEXT,
+            llave_unica TEXT,
+            resumen TEXT
+        )
+    """)
+    #
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS credenciales (
             usuario TEXT PRIMARY KEY,
