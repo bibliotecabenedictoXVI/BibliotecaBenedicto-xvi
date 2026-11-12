@@ -9,7 +9,7 @@ import smtplib
 import threading
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from scholarly import scholarly
+
 
 app = Flask(__name__)
 app.secret_key = "seminario_sjp2_secret_key"
