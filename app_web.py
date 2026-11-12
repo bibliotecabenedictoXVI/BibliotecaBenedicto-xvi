@@ -10,6 +10,7 @@ import threading
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
+
 app = Flask(__name__)
 app.secret_key = "seminario_sjp2_secret_key"
 
@@ -134,9 +135,10 @@ def inicializar_bd():
     if os.path.exists(EXCEL_DB_PATH):
         try:
             excel_df = pd.read_excel(EXCEL_DB_PATH, sheet_name=0)
-            for _, row in excel_df.iterrows():
+            for idx, row in excel_df.iterrows():
                 llave_unica = str(row.get('Llave Única', '')).strip()
-                if not llave_unica or llave_unica == 'nan': continue
+                if not llave_unica or llave_unica == 'nan': 
+                    llave_unica = f"EXCEL-{idx}"
                 
                 titulo = str(row.get('Título completo', 'S/T')).strip()
                 autor = str(row.get('Autor(es)', 'S/A')).strip()
@@ -155,7 +157,7 @@ def inicializar_bd():
                 resumen_excel = str(row.get('RESUMEN LIBROS', '')).strip()
                 
                 cursor.execute("INSERT OR REPLACE INTO libros VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", (
-                    clasificacion_dewey, titulo, autor, clasificacion_dewey, anio, ejem, ubicacion_excel, editorial, "MEDELLIN", llave_unica, resumen_excel
+                    llave_unica, titulo, autor, clasificacion_dewey, anio, ejem, ubicacion_excel, editorial, "MEDELLIN", llave_unica, resumen_excel
                 ))
             conn.commit()
         except Exception as e:
@@ -402,7 +404,7 @@ def index():
         tarjetas_celular += f"""
         <div class="card mb-3 shadow-sm border-0 bg-white p-3">
             <div class="d-flex justify-content-between align-items-start mb-2">
-                <span class="badge bg-dark">Dewey: {l[0]}</span>
+                <span class="badge bg-dark">Dewey: {l[3]}</span>
                 <span class="badge bg-{badge_color}">Disp: {l[5]}</span>
             </div>
             <h6 class="fw-bold mb-1">
@@ -489,7 +491,7 @@ def detalle_libro(id_libro):
     contenido = f"""
     <div class="card shadow-sm border-0 p-3 p-md-4 bg-white">
         <h3 class="fw-bold text-primary mb-3 fs-5">{l[1]}</h3>
-        <p class="small mb-1"><strong>Clasificación Dewey:</strong> {l[0]}</p>
+        <p class="small mb-1"><strong>Clasificación Dewey:</strong> {l[3]}</p>
         <p class="small mb-1"><strong>Autor:</strong> {l[2]}</p>
         <p class="small mb-1"><strong>Editorial y Año:</strong> {l[7]} ({l[4]})</p>
         <p class="small mb-3"><strong>Ubicación:</strong> {l[6]} | <strong>Disponibles:</strong> {l[5]}</p>
@@ -616,11 +618,13 @@ def nuevo_libro():
         ubicacion = request.form.get('ubicacion').strip().upper()
         editorial = request.form.get('editorial').strip().upper()
         resumen = request.form.get('resumen').strip()
+        
+        id_unico_manual = f"MAN-{abs(hash(titulo + autor)) % 100000}"
 
         conn = sqlite3.connect("biblioteca_sjp2.db")
         cursor = conn.cursor()
         cursor.execute("INSERT OR REPLACE INTO libros VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                       (id_dewey, titulo, autor, categoria, anio, ejemplares, ubicacion, editorial, "MEDELLIN", id_dewey, resumen))
+                       (id_unico_manual, titulo, autor, categoria, anio, ejemplares, ubicacion, editorial, "MEDELLIN", id_dewey, resumen))
         conn.commit()
         conn.close()
         flash("Libro registrado exitosamente.", "success")
@@ -712,7 +716,7 @@ def editar_libro(id_libro):
 
     contenido = f"""
     <div class="card shadow-sm border-0 p-3 bg-white">
-        <h4 class="fw-bold text-secondary mb-3 fs-5"><i class="fa-solid fa-pen"></i> Editar Libro: {l[0]}</h4>
+        <h4 class="fw-bold text-secondary mb-3 fs-5"><i class="fa-solid fa-pen"></i> Editar Libro</h4>
         <form method="POST">
             <div class="mb-2">
                 <label class="form-label small fw-bold">Título Completo</label>
@@ -967,10 +971,10 @@ def buscar():
     conn = sqlite3.connect("biblioteca_sjp2.db")
     cursor = conn.cursor()
     if query:
-        cursor.execute("SELECT id, titulo, autor, categoria, anio, ejemplares, ubicacion FROM libros WHERE id LIKE ? OR titulo LIKE ? OR autor LIKE ? OR categoria LIKE ? OR ubicacion LIKE ?", 
-                       (f'%{query}%', f'%{query}%', f'%{query}%', f'%{query}%', f'%{query}%'))
+        cursor.execute("SELECT id, titulo, autor, categoria, anio, ejemplares, ubicacion, llave_unica FROM libros WHERE id LIKE ? OR titulo LIKE ? OR autor LIKE ? OR categoria LIKE ? OR ubicacion LIKE ? OR llave_unica LIKE ?", 
+                       (f'%{query}%', f'%{query}%', f'%{query}%', f'%{query}%', f'%{query}%', f'%{query}%'))
     else:
-        cursor.execute("SELECT id, titulo, autor, categoria, anio, ejemplares, ubicacion FROM libros")
+        cursor.execute("SELECT id, titulo, autor, categoria, anio, ejemplares, ubicacion, llave_unica FROM libros")
     resultados = cursor.fetchall()
     conn.close()
 
@@ -989,7 +993,7 @@ def buscar():
 
         filas_pc += f"""
         <tr>
-            <td><strong>{l[0]}</strong></td>
+            <td><strong>{l[7]}</strong></td>
             <td><a href="/libro/{l[0]}" class="text-primary text-decoration-none fw-bold">{l[1]}</a></td>
             <td>{l[2]}</td>
             <td>{l[3]}</td>
@@ -1002,7 +1006,7 @@ def buscar():
         tarjetas_celular += f"""
         <div class="card mb-3 shadow-sm border-0 bg-white p-3">
             <div class="d-flex justify-content-between align-items-start mb-2">
-                <span class="badge bg-dark">Dewey: {l[0]}</span>
+                <span class="badge bg-dark">Dewey: {l[7]}</span>
                 <span class="badge bg-{badge_color}">Disp: {l[5]}</span>
             </div>
             <h6 class="fw-bold mb-1">
@@ -1055,7 +1059,7 @@ def pendientes():
     libros = []
     if ids:
         placeholders = ','.join(['?'] * len(ids))
-        cursor.execute(f"SELECT id, titulo, autor, ejemplares, ubicacion FROM libros WHERE id IN ({placeholders})", ids)
+        cursor.execute(f"SELECT id, titulo, autor, ejemplares, ubicacion, llave_unica FROM libros WHERE id IN ({placeholders})", ids)
         libros = cursor.fetchall()
     conn.close()
 
@@ -1063,7 +1067,7 @@ def pendientes():
     for l in libros:
         filas += f"""
         <tr>
-            <td><strong>{l[0]}</strong></td>
+            <td><strong>{l[5]}</strong></td>
             <td><a href="/libro/{l[0]}" class="text-primary text-decoration-none fw-bold">{l[1]}</a></td>
             <td>{l[2]}</td>
             <td>{l[3]}</td>
@@ -1407,140 +1411,6 @@ def eliminar_cuenta(usuario):
     conn.close()
     flash("Cuenta de usuario eliminada correctamente.", "success")
     return redirect(url_for('admin_cuentas'))
-
-# --- MÓDULO MASIVO (SCHOLAR + CROSSREF + DOAJ) ---
-@app.route('/importador_abierto', methods=['GET', 'POST'])
-def importador_abierto():
-    if 'usuario' not in session: 
-        return redirect(url_for('login'))
-    
-    resultados_articulos = []
-    query = ""
-    
-    if request.method == 'POST':
-        query = request.form.get('query', '').strip()
-        if query:
-            # 1. Google Scholar
-            try:
-                search_query = scholarly.search_pubs(query)
-                for _ in range(12):
-                    try:
-                        pub = next(search_query)
-                        bib = pub.get('bib', {})
-                        titulo_art = bib.get('title', 'Sin título')
-                        autores_raw = bib.get('author', 'Autor desconocido')
-                        nombres_autores = ", ".join(autores_raw) if isinstance(autores_raw, list) else str(autores_raw)
-                        try: anio_pub = int(bib.get('pub_year', 2024))
-                        except: anio_pub = 2024
-                        enlace_pdf = pub.get('pub_url', '#') or f"https://scholar.google.com/scholar?q={query.replace(' ', '+')}"
-                        resultados_articulos.append({'titulo': titulo_art, 'autor': nombres_autores, 'anio': anio_pub, 'enlace': enlace_pdf, 'fuente': 'Google Scholar'})
-                    except StopIteration:
-                        break
-            except Exception as e:
-                print(f"Error Scholar: {e}")
-
-            # 2. Crossref
-            try:
-                url_crossref = f"https://api.crossref.org/works?query={query}&rows=12"
-                headers = {"User-Agent": "BibliotecaSeminaristaSJP2/1.0 (mailto:admin@seminario.edu)"}
-                resp_cr = requests.get(url_crossref, headers=headers, timeout=8)
-                if resp_cr.status_code == 200:
-                    for item in resp_cr.json().get('message', {}).get('items', []):
-                        titulo_art = item.get('title', ['Sin título'])[0]
-                        autores_lista = item.get('author', [])
-                        nombres_autores = ", ".join([f"{a.get('given', '')} {a.get('family', '')}" for a in autores_lista]) or "Autor desconocido"
-                        try: anio_pub = item.get('published-print', {}).get('date-parts', [[2024]])[0][0]
-                        except: anio_pub = 2024
-                        link_pdf = item.get('URL', f"https://scholar.google.com/scholar?q={query.replace(' ', '+')}")
-                        resultados_articulos.append({'titulo': titulo_art, 'autor': nombres_autores, 'anio': anio_pub, 'enlace': link_pdf, 'fuente': 'Crossref'})
-            except Exception as e:
-                print(f"Error Crossref: {e}")
-
-            # 3. DOAJ
-            try:
-                url_doaj = f"https://doaj.org/api/v3/search/articles/{query}?pageSize=12"
-                resp_doaj = requests.get(url_doaj, timeout=8)
-                if resp_doaj.status_code == 200:
-                    for entry in resp_doaj.json().get('results', []):
-                        biblio = entry.get('bibjson', {})
-                        titulo_art = biblio.get('title', 'Sin título')
-                        autores_lista = biblio.get('author', [])
-                        nombres_autores = ", ".join([a.get('name', 'Desconocido') for a in autores_lista]) or "Autor institucional"
-                        try: anio_pub = int(biblio.get('year', 2024))
-                        except: anio_pub = 2024
-                        enlaces = biblio.get('link', [])
-                        link_pdf = enlaces[0].get('url', '#') if enlaces else f"https://scholar.google.com/scholar?q={query.replace(' ', '+')}"
-                        resultados_articulos.append({'titulo': titulo_art, 'autor': nombres_autores, 'anio': anio_pub, 'enlace': link_pdf, 'fuente': 'DOAJ'})
-            except Exception as e:
-                print(f"Error DOAJ: {e}")
-
-    filas_res = ""
-    for art in resultados_articulos:
-        bg_col = "success" if art['fuente'] == 'Google Scholar' else ("info" if art['fuente'] == 'Crossref' else "warning text-dark")
-        filas_res += f"""
-        <tr>
-            <td><strong>{art['titulo']}</strong><br><span class="badge bg-{bg_col}">{art['fuente']}</span></td>
-            <td>{art['autor']}</td>
-            <td>{art['anio']}</td>
-            <td><a href="{art['enlace']}" target="_blank" class="btn btn-sm btn-outline-primary mb-1"><i class="fa-solid fa-external-link"></i></a></td>
-            <td>
-                <form action="/guardar_importado" method="POST" style="display:inline;">
-                    <input type="hidden" name="titulo" value="{art['titulo']}">
-                    <input type="hidden" name="autor" value="{art['autor']}">
-                    <input type="hidden" name="anio" value="{art['anio']}">
-                    <input type="hidden" name="enlace" value="{art['enlace']}">
-                    <button type="submit" class="btn btn-sm btn-success fw-bold mb-1"><i class="fa-solid fa-download"></i></button>
-                </form>
-            </td>
-        </tr>
-        """
-
-    contenido = f"""
-    <div class="card shadow-sm border-0 p-3 bg-white mb-3">
-        <h4 class="fw-bold text-secondary mb-2 fs-6"><i class="fa-solid fa-globe"></i> Buscador Masivo (Scholar + Crossref + DOAJ)</h4>
-        <form method="POST" class="input-group input-group-sm">
-            <input type="text" name="query" class="form-control" placeholder="Ej: Teología dogmática, Ética..." value="{query}" required>
-            <button class="btn btn-primary" type="submit"><i class="fa-solid fa-magnifying-glass"></i></button>
-        </form>
-    </div>
-
-    <div class="card shadow-sm border-0 p-3 bg-white">
-        <h4 class="fw-bold text-secondary mb-3 fs-6">Resultados ({len(resultados_articulos)})</h4>
-        <div class="table-responsive">
-            <table class="table table-hover align-middle small">
-                <thead class="table-dark">
-                    <tr><th>Título / Fuente</th><th>Autor(es)</th><th>Año</th><th>Enlace</th><th>Importar</th></tr>
-                </thead>
-                <tbody>
-                    {filas_res if filas_res else '<tr><td colspan="5" class="text-center text-muted">No ingresaste un término de búsqueda.</td></tr>'}
-                </tbody>
-            </table>
-        </div>
-    </div>
-    """
-    return render_template_string(LAYOUT_HTML, contenido=contenido)
-
-@app.route('/guardar_importado', methods=['POST'])
-def guardar_importado():
-    if 'usuario' not in session: 
-        return redirect(url_for('login'))
-    
-    titulo = request.form.get('titulo').strip().upper()
-    autor = request.form.get('autor').strip().upper()
-    anio = int(request.form.get('anio', 2024))
-    enlace = request.form.get('enlace', '').strip()
-    
-    id_virtual = f"MS-{abs(hash(titulo)) % 10000}"
-    
-    conn = sqlite3.connect("biblioteca_sjp2.db")
-    cursor = conn.cursor()
-    cursor.execute("INSERT OR REPLACE INTO libros VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                   (id_virtual, titulo, autor, "INVESTIGACIÓN ACADÉMICA", anio, 1, "ACCESO ABIERTO MASIVO", "Google Scholar, Crossref & DOAJ", "MEDELLIN", id_virtual, f"Recurso académico masivo importado. Enlace web: {enlace}"))
-    conn.commit()
-    conn.close()
-    
-    flash(f"¡Artículo importado con éxito!", "success")
-    return redirect(url_for('index'))
 
 if __name__ == '__main__':
     inicializar_bd()
