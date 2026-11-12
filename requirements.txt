@@ -1,7 +1,2 @@
-Flask
-pandas
-requests
-scholarly
-openpyxl
-gunicorn
-bibtexparser
+Borra todo el contenido anterior y deja exactamente estas cinco líneas estables:
+<pre><code>Flask
